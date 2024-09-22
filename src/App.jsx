@@ -7,23 +7,32 @@ function App() {
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    fetch("https://pokeapi.co/api/v2/pokemon?limit=50")
-      .then((response) => response.json())
-      .then((data) => {
-        const results = data.results;
+  const fetchData = async () => {
+    try {
+      const response = await fetch("https://pokeapi.co/api/v2/pokemon?limit=50");
+      if (!response.ok) throw new Error("Failed to fetch Pokémon data");
+      const data = await response.json();
 
-        const detailedData = results.map((pokemon) => {
-          return fetch(pokemon.url)
-            .then((res) => res.json())
-            .then((pokemonDetail) => ({
-              name: pokemonDetail.name,
-              image: pokemonDetail.sprites.front_default,
-            }));
-        });
+      const detailedData = await Promise.all(
+        data.results.map(async (pokemon) => {
+          const res = await fetch(pokemon.url);
+          if (!res.ok) throw new Error(`Failed to fetch details for ${pokemon.name}`);
+          const pokemonDetail = await res.json();
+          return {
+            name: pokemonDetail.name,
+            image: pokemonDetail.sprites.front_default,
+          };
+        })
+      );
 
-        Promise.all(detailedData).then(setPokemonData);
-      });
-  }, []);
+      setPokemonData(detailedData);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
+
+  fetchData();
+}, []);
 
   useEffect(() => {
     setFilteredPokemon(
